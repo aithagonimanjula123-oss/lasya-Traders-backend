@@ -1,0 +1,114 @@
+{
+  "business": {
+    "name": "Lasya Traders",
+    "tagline": "Wholesale Grocery Supply",
+    "location": "Chennai, Tamil Nadu",
+    "phone": "+91 98765 43210",
+    "email": "info@lasyatraders.com",
+    "gst": "33AABCL1234Z1Z5",
+    "founded": "2018",
+    "currency": "INR",
+    "paymentMethod": "Cash on Delivery"
+  },
+  "categories": ["Soaps", "Chocolates", "Accessories", "Beverages", "Snacks"],
+  "products": [
+    { "id": 1,  "name": "Dove Soap Bar",           "category": "Soaps",       "price": 28,  "stock": 240, "imageUrl": null, "unit": "per bar",    "minOrder": 12 },
+    { "id": 2,  "name": "Dettol Hand Wash 200ml",  "category": "Soaps",       "price": 65,  "stock": 180, "imageUrl": null, "unit": "per bottle", "minOrder": 6  },
+    { "id": 3,  "name": "Lux Rose Soap",           "category": "Soaps",       "price": 22,  "stock": 310, "imageUrl": null, "unit": "per bar",    "minOrder": 12 },
+    { "id": 4,  "name": "Lifebuoy Total 10",       "category": "Soaps",       "price": 30,  "stock": 200, "imageUrl": null, "unit": "per bar",    "minOrder": 12 },
+    { "id": 5,  "name": "Dairy Milk 50g",          "category": "Chocolates",  "price": 42,  "stock": 500, "imageUrl": null, "unit": "per bar",    "minOrder": 24 },
+    { "id": 6,  "name": "KitKat 4-Finger",         "category": "Chocolates",  "price": 58,  "stock": 320, "imageUrl": null, "unit": "per pack",   "minOrder": 12 },
+    { "id": 7,  "name": "Munch Bar (10-pack)",      "category": "Chocolates",  "price": 95,  "stock": 12,  "imageUrl": null, "unit": "per pack",   "minOrder": 6  },
+    { "id": 8,  "name": "5-Star Chocolate Bar",    "category": "Chocolates",  "price": 20,  "stock": 400, "imageUrl": null, "unit": "per bar",    "minOrder": 24 },
+    { "id": 9,  "name": "Colgate Toothbrush",      "category": "Accessories", "price": 35,  "stock": 430, "imageUrl": null, "unit": "per piece",  "minOrder": 12 },
+    { "id": 10, "name": "Scotch-Brite Scrubber",   "category": "Accessories", "price": 48,  "stock": 200, "imageUrl": null, "unit": "per piece",  "minOrder": 6  },
+    { "id": 11, "name": "Colgate MaxFresh 150g",   "category": "Accessories", "price": 75,  "stock": 160, "imageUrl": null, "unit": "per tube",   "minOrder": 6  },
+    { "id": 12, "name": "Parle-G Biscuits 200g",   "category": "Snacks",      "price": 20,  "stock": 600, "imageUrl": null, "unit": "per pack",   "minOrder": 24 },
+    { "id": 13, "name": "Haldirams Namkeen 200g",  "category": "Snacks",      "price": 55,  "stock": 280, "imageUrl": null, "unit": "per pack",   "minOrder": 12 },
+    { "id": 14, "name": "Kurkure Masala 90g",      "category": "Snacks",      "price": 20,  "stock": 350, "imageUrl": null, "unit": "per pack",   "minOrder": 24 },
+    { "id": 15, "name": "Real Fruit Juice 1L",     "category": "Beverages",   "price": 85,  "stock": 150, "imageUrl": null, "unit": "per bottle", "minOrder": 6  },
+    { "id": 16, "name": "Tropicana Orange 1L",     "category": "Beverages",   "price": 90,  "stock": 8,   "imageUrl": null, "unit": "per bottle", "minOrder": 6  },
+    { "id": 17, "name": "Bisleri Water 1L",        "category": "Beverages",   "price": 20,  "stock": 500, "imageUrl": null, "unit": "per bottle", "minOrder": 24 },
+    { "id": 18, "name": "Frooti Mango 200ml",      "category": "Beverages",   "price": 15,  "stock": 400, "imageUrl": null, "unit": "per pack",   "minOrder": 24 }
+  ],
+  "revenueTargets": {
+    "daily":   5000,
+    "weekly":  35000,
+    "monthly": 150000
+  },
+  "orderStatuses": ["Pending", "Confirmed", "Delivered", "Cash Collected"],
+  "sampleOrders": [
+    {
+      "id": 1001,
+      "storeName": "Sri Murugan Stores",
+      "storePhone": "9876543210",
+      "items": [
+        { "productId": 1,  "productName": "Dove Soap Bar",         "category": "Soaps",      "price": 28, "quantity": 24 },
+        { "productId": 5,  "productName": "Dairy Milk 50g",        "category": "Chocolates", "price": 42, "quantity": 12 },
+        { "productId": 15, "productName": "Real Fruit Juice 1L",   "category": "Beverages",  "price": 85, "quantity": 6  }
+      ],
+      "totalAmount": 1686,
+      "status": "Cash Collected",
+      "paymentMethod": "Cash on Delivery",
+      "cashCollected": true,
+      "placedAt": "2025-05-26T09:15:00.000Z"
+    },
+    {
+      "id": 1002,
+      "storeName": "Lakshmi Provision Store",
+      "storePhone": "9123456789",
+      "items": [
+        { "productId": 6,  "productName": "KitKat 4-Finger",       "category": "Chocolates", "price": 58, "quantity": 24 },
+        { "productId": 9,  "productName": "Colgate Toothbrush",    "category": "Accessories","price": 35, "quantity": 12 }
+      ],
+      "totalAmount": 1812,
+      "status": "Delivered",
+      "paymentMethod": "Cash on Delivery",
+      "cashCollected": false,
+      "placedAt": "2025-05-27T11:30:00.000Z"
+    },
+    {
+      "id": 1003,
+      "storeName": "Ravi General Stores",
+      "storePhone": "9988776655",
+      "items": [
+        { "productId": 12, "productName": "Parle-G Biscuits 200g", "category": "Snacks",     "price": 20, "quantity": 48 },
+        { "productId": 17, "productName": "Bisleri Water 1L",      "category": "Beverages",  "price": 20, "quantity": 24 },
+        { "productId": 2,  "productName": "Dettol Hand Wash 200ml","category": "Soaps",      "price": 65, "quantity": 12 }
+      ],
+      "totalAmount": 2700,
+      "status": "Confirmed",
+      "paymentMethod": "Cash on Delivery",
+      "cashCollected": false,
+      "placedAt": "2025-05-28T08:00:00.000Z"
+    },
+    {
+      "id": 1004,
+      "storeName": "Anand Super Market",
+      "storePhone": "9765432100",
+      "items": [
+        { "productId": 5,  "productName": "Dairy Milk 50g",        "category": "Chocolates", "price": 42, "quantity": 48 },
+        { "productId": 13, "productName": "Haldirams Namkeen 200g","category": "Snacks",     "price": 55, "quantity": 12 }
+      ],
+      "totalAmount": 2676,
+      "status": "Cash Collected",
+      "paymentMethod": "Cash on Delivery",
+      "cashCollected": true,
+      "placedAt": "2025-05-29T10:45:00.000Z"
+    },
+    {
+      "id": 1005,
+      "storeName": "Kumar Kirana",
+      "storePhone": "9654321098",
+      "items": [
+        { "productId": 3,  "productName": "Lux Rose Soap",         "category": "Soaps",      "price": 22, "quantity": 36 },
+        { "productId": 16, "productName": "Tropicana Orange 1L",   "category": "Beverages",  "price": 90, "quantity": 12 }
+      ],
+      "totalAmount": 1872,
+      "status": "Pending",
+      "paymentMethod": "Cash on Delivery",
+      "cashCollected": false,
+      "placedAt": "2025-05-30T14:20:00.000Z"
+    }
+  ]
+}
