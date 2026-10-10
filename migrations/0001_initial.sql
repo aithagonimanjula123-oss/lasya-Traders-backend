@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   storeName TEXT NOT NULL CHECK(length(trim(storeName)) BETWEEN 1 AND 160),
+  storeEmail TEXT NOT NULL,
   storePhone TEXT,
   items TEXT NOT NULL CHECK(json_valid(items)),
   totalAmount REAL NOT NULL CHECK(totalAmount > 0),
@@ -26,3 +27,4 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_orders_placedAt ON orders(placedAt);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_storeEmail ON orders(storeEmail);
