@@ -93,7 +93,8 @@ export default {
     return r.meta.changes?json({success:true},200,headers):fail('Not found',404);
    }
    if(path==='/api/orders' && method==='GET'){
-    let sql='SELECT * FROM orders', clauses=[], args=[];\n    if(auth.role==='owner'){clauses.push('storeEmail=?');args.push(auth.email);}
+    let sql='SELECT * FROM orders', clauses=[], args=[];
+    if(auth.role==='owner'){clauses.push('storeEmail=?');args.push(auth.email);}
     const date=url.searchParams.get('date'),status=url.searchParams.get('status'),cash=url.searchParams.get('cashCollected');
     if(date){clauses.push('substr(placedAt,1,10)=?');args.push(date);}
     if(status&&STATUSES.has(status)){clauses.push('status=?');args.push(status);}
@@ -114,7 +115,8 @@ export default {
    const om=path.match(/^\/api\/orders\/(\d+)$/);
    if(om && method==='GET'){
     const row=await db.prepare('SELECT * FROM orders WHERE id=?').bind(Number(om[1])).first();
-    return row?json(orderShape(row),200,headers):fail('Not found',404);
+    if(!row||(auth.role==='owner'&&row.storeEmail!==auth.email))return fail('Not found',404);
+    return json(orderShape(row),200,headers);
    }
    if(om && method==='PUT'){
     const id=Number(om[1]),b=await request.json(),old=await db.prepare('SELECT * FROM orders WHERE id=?').bind(id).first();
