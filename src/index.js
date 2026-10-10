@@ -105,11 +105,21 @@ export default {
    }
    if(path==='/api/orders' && method==='POST'){
     const b=await request.json(), storeName=String(b.storeName||'').trim(), items=b.items;
-    const totalAmount=Number(b.totalAmount);
-    if(!storeName||storeName.length>160||!Array.isArray(items)||!items.length||items.length>100||!Number.isFinite(totalAmount)||totalAmount<=0)return fail('Invalid order fields');
-    const orderItems=JSON.stringify(items);
+    if(!storeName||storeName.length>160||!Array.isArray(items)||!items.length||items.length>100)return fail('Invalid order fields');
+    const verifiedItems=[]; let totalAmount=0;
+    for(const item of items){
+      const productId=Number(item.productId), quantity=Number(item.quantity);
+      if(!Number.isInteger(productId)||!Number.isInteger(quantity)||quantity<1||quantity>10000)return fail('Invalid order item');
+      const product=await db.prepare('SELECT id,name,category,price,stock FROM products WHERE id=?').bind(productId).first();
+      if(!product)return fail('Product not found: '+productId,400);
+      if(product.stock<quantity)return fail('Insufficient stock for '+product.name,409);
+      totalAmount+=Number(product.price)*quantity;
+      verifiedItems.push({productId:product.id,productName:product.name,category:product.category,price:Number(product.price),quantity});
+    }
+    if(!Number.isFinite(totalAmount)||totalAmount<=0)return fail('Invalid order total');
+    const orderItems=JSON.stringify(verifiedItems);
     const r=await db.prepare('INSERT INTO orders(storeName,storeEmail,storePhone,items,totalAmount,status,paymentMethod,cashCollected,placedAt,updatedAt) VALUES(?,?,?,?,?,?,?,?,?,?)')
-      .bind(storeName,auth.email,typeof b.storePhone==='string'?b.storePhone.slice(0,30):null,orderItems,totalAmount,'Pending','Cash on Delivery',0,typeof b.placedAt==='string'?b.placedAt:now(),now()).run();
+      .bind(storeName,auth.email,typeof b.storePhone==='string'?b.storePhone.slice(0,30):null,orderItems,totalAmount,'Pending','Cash on Delivery',0,now(),now()).run();
     return json(orderShape(await db.prepare('SELECT * FROM orders WHERE id=?').bind(r.meta.last_row_id).first()),201,headers);
    }
    const om=path.match(/^\/api\/orders\/(\d+)$/);
