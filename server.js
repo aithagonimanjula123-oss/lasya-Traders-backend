@@ -9,6 +9,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+// Prefer the server-only service-role key when configured. Never expose this key in frontend code.
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_KEY = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const SESSION_SECRET = process.env.SESSION_SECRET || '';
@@ -17,8 +20,8 @@ const SITE_ORIGINS = new Set([
   'https://lasya-traders.netlify.app',
   'https://lasya-traders-frontend-latest.onrender.com'
 ]);
-const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
+const supabase = SUPABASE_URL && SUPABASE_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
 
 app.use(cors({
@@ -135,10 +138,18 @@ function fail(res, error, message = 'Database request failed') {
 }
 
 app.get('/api/health', async (_, res) => {
-  if (!supabase) return res.status(503).json({ status: 'offline', message: 'Set SUPABASE_URL and SUPABASE_ANON_KEY in Render.' });
-  const { error } = await supabase.from('products').select('id', { head: true, count: 'exact' });
-  if (error) return res.status(503).json({ status: 'offline', message: 'Supabase connection failed.' });
-  return res.json({ status: 'ok', service: 'Lasya Traders API', database: 'connected' });
+  if (!supabase) return res.status(503).json({ status: 'offline', message: 'Set SUPABASE_URL and SUPABASE_ANON_KEY (or SUPABASE_SERVICE_ROLE_KEY) in Render.' });
+  try {
+    const { error } = await supabase.from('products').select('id', { head: true, count: 'exact' });
+    if (error) {
+      console.error('Supabase health check failed:', error.message || error.code || 'unknown database error');
+      return res.status(503).json({ status: 'offline', message: 'Supabase connection failed. Check the server logs for the database error.' });
+    }
+    return res.json({ status: 'ok', service: 'Lasya Traders API', database: 'connected' });
+  } catch (error) {
+    console.error('Supabase health check threw:', error?.message || error);
+    return res.status(503).json({ status: 'offline', message: 'Supabase health check failed. Check the server logs.' });
+  }
 });
 
 app.get('/api/products', async (req, res) => {
