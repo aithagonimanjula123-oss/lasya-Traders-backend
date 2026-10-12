@@ -2,17 +2,30 @@
 
 const express = require('express');
 const cors = require('cors');
+const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const SESSION_SECRET = process.env.SESSION_SECRET || '';
+const SITE_ORIGIN = 'https://lasyatraderschandur.netlify.app';
 const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
 
-app.use(cors({ origin: true }));
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || origin === SITE_ORIGIN || /^http:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true);
+    return callback(new Error('Origin not allowed by CORS'));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 600
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use((req, _, next) => { console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`); next(); });
 
@@ -23,6 +36,61 @@ const dbRequired = (req, res, next) => {
   next();
 };
 app.use('/api', dbRequired);
+
+// Small in-memory login limiter; use a managed rate limiter for multi-instance production.
+const loginAttempts = new Map();
+function loginRateLimit(req, res, next) {
+  const key = req.ip || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  let record = loginAttempts.get(key);
+  if (!record || now - record.start > 15 * 60 * 1000) record = { start: now, count: 0 };
+  record.count += 1; loginAttempts.set(key, record);
+  if (record.count > 10) return res.status(429).json({ message: 'Too many login attempts. Try again in 15 minutes.' });
+  next();
+}
+function safeEqual(a, b) {
+  const left = Buffer.from(String(a)); const right = Buffer.from(String(b));
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+function makeToken(email) {
+  const payload = Buffer.from(JSON.stringify({ sub: email, exp: Date.now() + 8 * 60 * 60 * 1000 })).toString('base64url');
+  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
+  return payload + '.' + sig;
+}
+function requireAdmin(req, res, next) {
+  if (!SESSION_SECRET || !ADMIN_EMAIL || !ADMIN_PASSWORD) return res.status(503).json({ message: 'Staff authentication is not configured.' });
+  const auth = req.headers.authorization || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  const parts = token.split('.');
+  if (parts.length !== 2) return res.status(401).json({ message: 'Staff sign-in required.' });
+  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(parts[0]).digest('base64url');
+  if (!safeEqual(parts[1], expected)) return res.status(401).json({ message: 'Invalid or expired staff session.' });
+  try {
+    const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    if (payload.sub !== ADMIN_EMAIL || !Number.isFinite(payload.exp) || payload.exp < Date.now()) return res.status(401).json({ message: 'Staff session expired. Sign in again.' });
+    req.adminEmail = payload.sub;
+    next();
+  } catch (_) { return res.status(401).json({ message: 'Invalid staff session.' }); }
+}
+app.post('/api/auth/login', loginRateLimit, (req, res) => {
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !SESSION_SECRET) return res.status(503).json({ message: 'Staff authentication is not configured on the server.' });
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const password = String(req.body?.password || '');
+  if (!safeEqual(email, ADMIN_EMAIL) || !safeEqual(password, ADMIN_PASSWORD)) {
+    return res.status(401).json({ message: 'Incorrect staff email or password.' });
+  }
+  res.json({ token: makeToken(email), expiresIn: 28800 });
+});
+// Public catalogue reads and customer order creation are allowed; staff operations require a signed session.
+app.use('/api/products', (req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return requireAdmin(req, res, next);
+  next();
+});
+app.use('/api/orders', (req, res, next) => {
+  if (req.method === 'POST' && (req.path === '/' || req.path === '')) return next();
+  return requireAdmin(req, res, next);
+});
+app.use('/api/summary', requireAdmin);
 
 function productOut(p) {
   return { id: Number(p.id), name: p.name, category: p.category, price: Number(p.price), stock: Number(p.stock),
