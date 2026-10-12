@@ -22,7 +22,10 @@ const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
 
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || SITE_ORIGINS.has(origin) || /^https:\/\/(?:[a-z0-9-]+--)?lasyatraderschandur\.netlify\.app$/.test(origin) || /^http:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true);
+    if (!origin || SITE_ORIGINS.has(origin) ||
+      /^https:\/\/(?:[a-z0-9-]+--)?(?:lasyatraderschandur|lasya-traders-chandur|lasya-traders)\.netlify\.app$/.test(origin) ||
+      /^http:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true);
+    console.warn('Rejected CORS origin:', origin);
     return callback(new Error('Origin not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
