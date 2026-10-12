@@ -42,7 +42,11 @@ const dbRequired = (req, res, next) => {
   if (!supabase) return res.status(503).json({ message: 'Database is not configured on the server.' });
   next();
 };
-app.use('/api', dbRequired);
+app.use('/api', (req, res, next) => {
+  // Authentication and health diagnostics must remain reachable even if Supabase is not configured.
+  if (req.path === '/auth/login' || req.path === '/health') return next();
+  return dbRequired(req, res, next);
+});
 
 // Small in-memory login limiter; use a managed rate limiter for multi-instance production.
 const loginAttempts = new Map();
