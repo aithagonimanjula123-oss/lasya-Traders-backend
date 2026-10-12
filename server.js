@@ -12,14 +12,17 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const SESSION_SECRET = process.env.SESSION_SECRET || '';
-const SITE_ORIGIN = 'https://lasyatraderschandur.netlify.app';
+const SITE_ORIGINS = new Set([
+  'https://lasyatraderschandur.netlify.app',
+  'https://lasya-traders.netlify.app'
+]);
 const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
 
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || origin === SITE_ORIGIN || /^http:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true);
+    if (!origin || SITE_ORIGINS.has(origin) || /^https:\/\/(?:[a-z0-9-]+--)?lasyatraderschandur\.netlify\.app$/.test(origin) || /^http:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true);
     return callback(new Error('Origin not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
