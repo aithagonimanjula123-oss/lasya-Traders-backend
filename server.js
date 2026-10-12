@@ -14,7 +14,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const SESSION_SECRET = process.env.SESSION_SECRET || '';
 const SITE_ORIGINS = new Set([
   'https://lasyatraderschandur.netlify.app',
-  'https://lasya-traders.netlify.app'
+  'https://lasya-traders.netlify.app',
+  'https://lasya-traders-frontend-latest.onrender.com'
 ]);
 const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
