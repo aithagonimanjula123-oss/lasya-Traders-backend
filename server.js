@@ -109,6 +109,7 @@ app.use('/api/summary', requireAdmin);
 function productOut(p) {
   return { id: Number(p.id), name: p.name, category: p.category, price: Number(p.price), stock: Number(p.stock),
     imageUrl: p.image_url || null, unit: p.unit || 'per piece', minOrder: Number(p.min_order || 1),
+    discountType: p.discount_type || null, discountValue: p.discount_value == null ? null : Number(p.discount_value),
     createdAt: p.created_at, updatedAt: p.updated_at };
 }
 function orderOut(o) {
@@ -130,6 +131,22 @@ function validateProduct(b) {
   if (!Number.isInteger(stock) || stock < 0) errors.push('stock must be a non-negative integer');
   else data.stock = stock;
   data.image_url = typeof b.imageUrl === 'string' && b.imageUrl.trim() ? b.imageUrl.trim() : null;
+  const discountType = b.discountType == null || b.discountType === '' ? null : String(b.discountType);
+  const discountValue = b.discountValue == null || b.discountValue === '' ? null : Number(b.discountValue);
+  if (discountType !== null && !['percent', 'flat'].includes(discountType)) errors.push('invalid discount type');
+  else if (discountType === null) {
+    data.discount_type = null;
+    data.discount_value = null;
+  } else if (!Number.isFinite(discountValue) || discountValue <= 0) {
+    errors.push('discount value must be greater than 0');
+  } else if (discountType === 'percent' && discountValue > 100) {
+    errors.push('percentage discount cannot exceed 100');
+  } else if (discountType === 'flat' && discountValue > price) {
+    errors.push('flat discount cannot exceed price');
+  } else {
+    data.discount_type = discountType;
+    data.discount_value = discountValue;
+  }
   return { data, errors };
 }
 function fail(res, error, message = 'Database request failed') {
