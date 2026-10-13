@@ -133,7 +133,8 @@ app.use('/api/products', (req, res, next) => {
   next();
 });
 app.use('/api/orders', (req, res, next) => {
-  if (req.method === 'POST' && (req.path === '/' || req.path === '')) return next();
+  if (req.method === 'POST' && (req.path === '/' || req.path === '')) return requireRole('owner', 'admin')(req, res, next);
+  if (req.method === 'GET' && (req.path === '/' || req.path === '')) return requireRole('owner', 'admin')(req, res, next);
   return requireAdmin(req, res, next);
 });
 app.use('/api/summary', requireAdmin);
@@ -291,6 +292,7 @@ app.delete('/api/products/:id', async (req, res) => {
 
 app.get('/api/orders', async (req, res) => {
   let query = supabase.from('orders').select('*').order('placed_at', { ascending: false });
+  if (req.auth?.role === 'owner') query = query.eq('store_email', req.auth.email);
   if (req.query.status) query = query.eq('status', req.query.status);
   if (req.query.cashCollected !== undefined) query = query.eq('cash_collected', req.query.cashCollected === 'true');
   if (req.query.date) {
@@ -332,9 +334,9 @@ app.post('/api/orders', async (req, res) => {
   if (!Array.isArray(b.items) || !b.items.length) return res.status(400).json({ message: 'items required' });
   const totalAmount = Number(b.totalAmount);
   if (!Number.isFinite(totalAmount) || totalAmount <= 0) return res.status(400).json({ message: 'totalAmount required' });
-  const values = { store_name: String(b.storeName).trim(), store_phone: b.storePhone || null, items: b.items,
+  const values = { store_name: String(b.storeName).trim(), store_email: req.auth?.email || null, store_phone: b.storePhone || null, items: b.items,
     total_amount: totalAmount, status: 'Pending', payment_method: 'Cash on Delivery',
-    cash_collected: false, placed_at: b.placedAt || new Date().toISOString() };
+    cash_collected: false, placed_at: new Date().toISOString() };
   const { data, error } = await supabase.from('orders').insert(values).select('*').single();
   if (error) return fail(res, error, 'Could not save order');
   console.log(`[ORDER +] #${data.id} "${data.store_name}" ₹${data.total_amount}`);
