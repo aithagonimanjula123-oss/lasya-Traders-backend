@@ -6,6 +6,16 @@ const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
+app.disable('x-powered-by');
+// Baseline security headers for API responses; HTTPS is terminated by Render.
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
 const PORT = process.env.PORT || 3000;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -45,7 +55,6 @@ const supabase = SUPABASE_URL && SUPABASE_KEY
 app.use(cors({
   origin(origin, callback) {
     if (!origin || SITE_ORIGINS.has(origin) ||
-      /^https:\/\/(?:[a-z0-9-]+\.)?netlify\.app$/.test(origin) ||
       /^http:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true);
     console.warn('Rejected CORS origin:', origin);
     return callback(new Error('Origin not allowed by CORS'));
@@ -113,7 +122,11 @@ function requireRole(...roles) {
   };
 }
 const requireAdmin = requireRole('admin');
-app.post('/api/auth/login', loginRateLimit, (req, res) => {
+app.post('/api/auth/login', loginRateLimit, (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  next();
+}, (req, res) => {
   if (!SESSION_SECRET || configuredAccounts.length === 0) {
     return res.status(503).json({ message: 'Authentication is not configured. Add approved accounts and SESSION_SECRET in Render.' });
   }
