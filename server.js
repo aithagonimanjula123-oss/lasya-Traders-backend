@@ -45,6 +45,7 @@ if (OWNER_EMAIL && OWNER_PASSWORD && !configuredAccounts.some(a => a.email === O
 }
 const SITE_ORIGINS = new Set([
   'https://lasyatraderschandur.netlify.app',
+  'https://lasyatradersshopchandur.netlify.app',
   'https://lasya-traders.netlify.app',
   'https://lasya-traders-frontend-latest.onrender.com'
 ]);
@@ -66,7 +67,7 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 app.use((req, _, next) => { console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`); next(); });
 
-const VALID_CATEGORIES = ['Soaps', 'Chocolates', 'Accessories', 'Beverages', 'Snacks'];
+const VALID_CATEGORIES = ['Soaps', 'Chocolates', 'Accessories', 'Beverages', 'Snacks', 'Home Care'];
 const VALID_STATUSES = ['Pending', 'Confirmed', 'Delivered', 'Cash Collected'];
 const dbRequired = (req, res, next) => {
   if (!supabase) return res.status(503).json({ message: 'Database is not configured on the server.' });
