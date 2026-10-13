@@ -101,9 +101,6 @@ function makeToken(account) {
 }
 function requireRole(...roles) {
   return (req, res, next) => {
-    if (!SESSION_SECRET || configuredAccounts.length === 0) {
-      return res.status(503).json({ message: 'Authentication is not configured on the server.' });
-    }
     const auth = req.headers.authorization || '';
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
     const parts = token.split('.');
