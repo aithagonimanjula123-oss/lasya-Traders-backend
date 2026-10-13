@@ -107,8 +107,15 @@ app.use('/api/orders', (req, res, next) => {
 app.use('/api/summary', requireAdmin);
 
 function productOut(p) {
-  return { id: Number(p.id), name: p.name, category: p.category, price: Number(p.price), stock: Number(p.stock),
+  return { id: Number(p.id), name: p.name, category: p.category, price: Number(p.sell_price ?? p.price), stock: Number(p.stock),
     imageUrl: p.image_url || null, unit: p.unit || 'per piece', minOrder: Number(p.min_order || 1),
+    unitCase: p.unit_case || null,
+    retailPrice: p.retail_price == null ? null : Number(p.retail_price),
+    whPrice: p.wh_price == null ? null : Number(p.wh_price),
+    sellPrice: p.sell_price == null ? Number(p.price) : Number(p.sell_price),
+    bulkPrice: p.bulk_price == null ? null : Number(p.bulk_price),
+    mrp: p.mrp == null ? null : Number(p.mrp),
+    discountPrice: p.discount_price == null ? null : Number(p.discount_price),
     discountType: p.discount_type || null, discountValue: p.discount_value == null ? null : Number(p.discount_value),
     createdAt: p.created_at, updatedAt: p.updated_at };
 }
@@ -131,6 +138,21 @@ function validateProduct(b) {
   if (!Number.isInteger(stock) || stock < 0) errors.push('stock must be a non-negative integer');
   else data.stock = stock;
   data.image_url = typeof b.imageUrl === 'string' && b.imageUrl.trim() ? b.imageUrl.trim() : null;
+  const optionalPrices = [
+    ['retailPrice', 'retail_price'], ['whPrice', 'wh_price'], ['sellPrice', 'sell_price'],
+    ['bulkPrice', 'bulk_price'], ['mrp', 'mrp'], ['discountPrice', 'discount_price']
+  ];
+  for (const [inputKey, dbKey] of optionalPrices) {
+    const raw = b[inputKey];
+    if (raw === undefined || raw === null || raw === '') {
+      data[dbKey] = inputKey === 'sellPrice' ? (data.price ?? Number(b.price)) : null;
+      continue;
+    }
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value < 0) errors.push(inputKey + ' must be a non-negative number');
+    else data[dbKey] = value;
+  }
+  data.unit_case = typeof b.unitCase === 'string' && b.unitCase.trim() ? b.unitCase.trim() : null;
   const discountType = b.discountType == null || b.discountType === '' ? null : String(b.discountType);
   const discountValue = b.discountValue == null || b.discountValue === '' ? null : Number(b.discountValue);
   if (discountType !== null && !['percent', 'flat'].includes(discountType)) errors.push('invalid discount type');
@@ -209,6 +231,13 @@ app.put('/api/products/:id', async (req, res) => {
     price: body.price ?? current.price,
     stock: body.stock ?? current.stock,
     imageUrl: body.imageUrl ?? current.image_url,
+    unitCase: body.unitCase ?? current.unit_case,
+    retailPrice: body.retailPrice ?? current.retail_price,
+    whPrice: body.whPrice ?? current.wh_price,
+    sellPrice: body.sellPrice ?? current.sell_price ?? current.price,
+    bulkPrice: body.bulkPrice ?? current.bulk_price,
+    mrp: body.mrp ?? current.mrp,
+    discountPrice: body.discountPrice ?? current.discount_price,
     discountType: body.discountType ?? current.discount_type,
     discountValue: body.discountValue ?? current.discount_value
   };
