@@ -14,7 +14,25 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPABASE_KEY = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const OWNER_EMAIL = (process.env.OWNER_EMAIL || '').trim().toLowerCase();
+const OWNER_PASSWORD = process.env.OWNER_PASSWORD || '';
 const SESSION_SECRET = process.env.SESSION_SECRET || '';
+let configuredAccounts = [];
+try {
+  const parsed = JSON.parse(process.env.AUTH_ACCOUNTS_JSON || '[]');
+  if (Array.isArray(parsed)) configuredAccounts = parsed
+    .filter(a => a && typeof a.email === 'string' && typeof a.password === 'string' && ['admin','owner'].includes(a.role))
+    .map(a => ({ email: a.email.trim().toLowerCase(), password: a.password, role: a.role }))
+    .filter(a => a.email && a.password.length >= 12);
+} catch (_) {
+  console.error('AUTH_ACCOUNTS_JSON is invalid JSON; using individual account environment variables.');
+}
+if (ADMIN_EMAIL && ADMIN_PASSWORD && !configuredAccounts.some(a => a.email === ADMIN_EMAIL)) {
+  configuredAccounts.push({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: 'admin' });
+}
+if (OWNER_EMAIL && OWNER_PASSWORD && !configuredAccounts.some(a => a.email === OWNER_EMAIL)) {
+  configuredAccounts.push({ email: OWNER_EMAIL, password: OWNER_PASSWORD, role: 'owner' });
+}
 const SITE_ORIGINS = new Set([
   'https://lasyatraderschandur.netlify.app',
   'https://lasya-traders.netlify.app',
@@ -46,12 +64,11 @@ const dbRequired = (req, res, next) => {
   next();
 };
 app.use('/api', (req, res, next) => {
-  // Authentication and health diagnostics must remain reachable even if Supabase is not configured.
   if (req.path === '/auth/login' || req.path === '/health') return next();
   return dbRequired(req, res, next);
 });
 
-// Small in-memory login limiter; use a managed rate limiter for multi-instance production.
+// Per-instance brute-force limiter. Keep this for the current single-instance deployment.
 const loginAttempts = new Map();
 function loginRateLimit(req, res, next) {
   const key = req.ip || req.socket.remoteAddress || 'unknown';
@@ -66,34 +83,49 @@ function safeEqual(a, b) {
   const left = Buffer.from(String(a)); const right = Buffer.from(String(b));
   return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
-function makeToken(email) {
-  const payload = Buffer.from(JSON.stringify({ sub: email, exp: Date.now() + 8 * 60 * 60 * 1000 })).toString('base64url');
+function makeToken(account) {
+  const payload = Buffer.from(JSON.stringify({
+    sub: account.email, role: account.role, exp: Date.now() + 8 * 60 * 60 * 1000
+  })).toString('base64url');
   const sig = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
   return payload + '.' + sig;
 }
-function requireAdmin(req, res, next) {
-  if (!SESSION_SECRET || !ADMIN_EMAIL || !ADMIN_PASSWORD) return res.status(503).json({ message: 'Staff authentication is not configured.' });
-  const auth = req.headers.authorization || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-  const parts = token.split('.');
-  if (parts.length !== 2) return res.status(401).json({ message: 'Staff sign-in required.' });
-  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(parts[0]).digest('base64url');
-  if (!safeEqual(parts[1], expected)) return res.status(401).json({ message: 'Invalid or expired staff session.' });
-  try {
-    const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
-    if (payload.sub !== ADMIN_EMAIL || !Number.isFinite(payload.exp) || payload.exp < Date.now()) return res.status(401).json({ message: 'Staff session expired. Sign in again.' });
-    req.adminEmail = payload.sub;
-    next();
-  } catch (_) { return res.status(401).json({ message: 'Invalid staff session.' }); }
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!SESSION_SECRET || configuredAccounts.length === 0) {
+      return res.status(503).json({ message: 'Authentication is not configured on the server.' });
+    }
+    const auth = req.headers.authorization || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+    const parts = token.split('.');
+    if (parts.length !== 2) return res.status(401).json({ message: 'Sign-in required.' });
+    const expected = crypto.createHmac('sha256', SESSION_SECRET).update(parts[0]).digest('base64url');
+    if (!safeEqual(parts[1], expected)) return res.status(401).json({ message: 'Invalid or expired session.' });
+    try {
+      const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+      const account = configuredAccounts.find(a => a.email === payload.sub && a.role === payload.role);
+      if (!account || !roles.includes(payload.role) || !Number.isFinite(payload.exp) || payload.exp < Date.now()) {
+        return res.status(401).json({ message: 'Session expired or account access was revoked. Sign in again.' });
+      }
+      req.auth = { email: payload.sub, role: payload.role };
+      next();
+    } catch (_) { return res.status(401).json({ message: 'Invalid session.' }); }
+  };
 }
+const requireAdmin = requireRole('admin');
 app.post('/api/auth/login', loginRateLimit, (req, res) => {
-  if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !SESSION_SECRET) return res.status(503).json({ message: 'Staff authentication is not configured on the server.' });
+  if (!SESSION_SECRET || configuredAccounts.length === 0) {
+    return res.status(503).json({ message: 'Authentication is not configured. Add approved accounts and SESSION_SECRET in Render.' });
+  }
   const email = String(req.body?.email || '').trim().toLowerCase();
   const password = String(req.body?.password || '');
-  if (!safeEqual(email, ADMIN_EMAIL) || !safeEqual(password, ADMIN_PASSWORD)) {
-    return res.status(401).json({ message: 'Incorrect staff email or password.' });
+  const requestedRole = String(req.body?.role || '');
+  if (!email || !password || !['admin','owner'].includes(requestedRole)) {
+    return res.status(400).json({ message: 'Email, password, and portal role are required.' });
   }
-  res.json({ token: makeToken(email), expiresIn: 28800 });
+  const account = configuredAccounts.find(a => a.email === email && a.role === requestedRole && safeEqual(a.password, password));
+  if (!account) return res.status(401).json({ message: 'Incorrect email/password or account is not approved for this portal.' });
+  res.json({ token: makeToken(account), role: account.role, expiresIn: 28800 });
 });
 // Public catalogue reads and customer order creation are allowed; staff operations require a signed session.
 app.use('/api/products', (req, res, next) => {
