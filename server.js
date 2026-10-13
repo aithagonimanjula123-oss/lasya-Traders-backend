@@ -26,7 +26,7 @@ const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || '').trim().toLowerCase();
 const OWNER_PASSWORD = process.env.OWNER_PASSWORD || '';
-const SESSION_SECRET = process.env.SESSION_SECRET || '';
+const SESSION_SECRET = process.env.SESSION_SECRET || 'lasya-traders-open-demo-session-secret';
 let configuredAccounts = [];
 try {
   const parsed = JSON.parse(process.env.AUTH_ACCOUNTS_JSON || '[]');
@@ -112,8 +112,7 @@ function requireRole(...roles) {
     if (!safeEqual(parts[1], expected)) return res.status(401).json({ message: 'Invalid or expired session.' });
     try {
       const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
-      const account = configuredAccounts.find(a => a.email === payload.sub && a.role === payload.role);
-      if (!account || !roles.includes(payload.role) || !Number.isFinite(payload.exp) || payload.exp < Date.now()) {
+        if (!roles.includes(payload.role) || typeof payload.sub !== 'string' || !Number.isFinite(payload.exp) || payload.exp < Date.now()) {
         return res.status(401).json({ message: 'Session expired or account access was revoked. Sign in again.' });
       }
       req.auth = { email: payload.sub, role: payload.role };
@@ -127,17 +126,14 @@ app.post('/api/auth/login', loginRateLimit, (req, res, next) => {
   res.setHeader('Pragma', 'no-cache');
   next();
 }, (req, res) => {
-  if (!SESSION_SECRET || configuredAccounts.length === 0) {
-    return res.status(503).json({ message: 'Authentication is not configured. Add approved accounts and SESSION_SECRET in Render.' });
-  }
   const email = String(req.body?.email || '').trim().toLowerCase();
   const password = String(req.body?.password || '');
   const requestedRole = String(req.body?.role || '');
   if (!email || !password || !['admin','owner'].includes(requestedRole)) {
-    return res.status(400).json({ message: 'Email, password, and portal role are required.' });
+    return res.status(400).json({ message: 'Enter any email/username and password, and choose a portal.' });
   }
-  const account = configuredAccounts.find(a => a.email === email && a.role === requestedRole && safeEqual(a.password, password));
-  if (!account) return res.status(401).json({ message: 'Incorrect email/password or account is not approved for this portal.' });
+  // Open demo mode by request: any non-empty credentials may enter the selected portal.
+  const account = { email, role: requestedRole };
   res.json({ token: makeToken(account), role: account.role, expiresIn: 28800 });
 });
 // Public catalogue reads and customer order creation are allowed; staff operations require a signed session.
