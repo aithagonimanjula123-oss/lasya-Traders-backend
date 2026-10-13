@@ -208,7 +208,9 @@ app.put('/api/products/:id', async (req, res) => {
     category: body.category ?? current.category,
     price: body.price ?? current.price,
     stock: body.stock ?? current.stock,
-    imageUrl: body.imageUrl ?? current.image_url
+    imageUrl: body.imageUrl ?? current.image_url,
+    discountType: body.discountType ?? current.discount_type,
+    discountValue: body.discountValue ?? current.discount_value
   };
   const { data: values, errors } = validateProduct(merged);
   if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
