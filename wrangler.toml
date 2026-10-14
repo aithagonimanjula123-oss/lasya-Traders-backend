@@ -1,0 +1,12 @@
+name = "last-traders-api"
+main = "src/index.js"
+compatibility_date = "2026-10-10"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "last-traders-production"
+database_id = "REPLACE_WITH_DATABASE_ID"
+migrations_dir = "migrations"
+
+[vars]
+ALLOWED_ORIGIN = "https://REPLACE_WITH_PAGES_DOMAIN"

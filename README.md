@@ -1,22 +1,18 @@
 # Lasya Traders — Backend
 
-Node.js / Express backend for the Lasya Traders wholesale supply platform.
+The existing Express server remains available for local development and rollback. The Cloudflare branch adds a persistent D1-backed Worker API with signed owner/staff sessions.
 
-## Deploy on Render
-1. Push this repo to GitHub
-2. Go to render.com → New Web Service → connect this repo
-3. Build command: `npm install`
-4. Start command: `node server.js`
-5. Instance type: Free
+## Recommended hosting
 
-## API Endpoints
-- GET  /api/health
-- GET  /api/products
-- POST /api/products
-- PUT  /api/products/:id
-- DELETE /api/products/:id
-- GET  /api/orders
-- POST /api/orders
-- PUT  /api/orders/:id
-- GET  /api/orders/daily-stats
-- GET  /api/summary
+Use the frontend repository's Cloudflare Pages project for the storefront and same-origin API. This avoids browser CORS configuration and lets Pages Functions use the D1 binding.
+
+## Cloudflare files
+- src/index.js — Worker API implementation.
+- migrations/0001_initial.sql — D1 tables and indexes.
+- wrangler.toml — standalone Worker configuration (replace the D1 UUID and set ALLOWED_ORIGIN before deploying it separately).
+- CLOUDFLARE-DEPLOY.md — step-by-step setup, secrets, and security checklist.
+
+## Existing Express development server
+Run npm install and npm start to launch server.js locally. The original Express backend keeps its in-memory data behavior; do not use it as the production database because state is lost when the process restarts.
+
+Real product records are intentionally not seeded until the business supplies the actual product catalogue.
