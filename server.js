@@ -47,7 +47,8 @@ const SITE_ORIGINS = new Set([
   'https://lasyatraderschandur.netlify.app',
   'https://lasyatradersshopchandur.netlify.app',
   'https://lasya-traders.netlify.app',
-  'https://lasya-traders-frontend-latest.onrender.com'
+  'https://lasya-traders-frontend-latest.onrender.com',
+  'https://lasyatradersshops.netlify.app'
 ]);
 const supabase = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
